@@ -1,0 +1,191 @@
+(****************************************
+*  Oblivious Transfer protocol [DNO08] 
+*   - when only receiver is honest
+*****************************************)
+
+set attacker = active.
+set movenew = true.
+set selFun = NounifsetMaxsize.
+
+(***** Preamble *****)
+
+type rand.	(* randomness *)
+type ekey.	(* encryption key *)
+type dkey.	(* decryption key *)
+type ckey.	(* commitment key *)
+type crstring.	(* common reference string *)
+type extrdoor.	(* proof extraction trapdoor *)
+type ciphertext.
+type commitment.
+type zkproof.
+
+fun crsfor(extrdoor) : crstring.
+fun ekfor(dkey) : ekey.
+
+(** Tags for termination **)
+type tag.
+const tagzero:tag.
+const tagone:tag.
+
+(** Domain **)
+type value.	
+const zero:value.
+const one:value.
+const two:value.
+
+(** Channels **)
+free inS : channel.
+free inR : channel.
+free outS : channel.
+free outR : channel.
+free leakRS : channel.
+free inflRS : channel.
+free leakSR : channel.
+free inflSR : channel.
+free leaksetup : channel.
+free advcommituin : channel.
+free advcommituout : channel.
+free advencrypttin : channel.
+free advencrypttout : channel.
+free advevalein : channel.
+free advevaleout : channel.
+
+(** Types **)
+(* U = Dom = { 0, 1, 2 } *)
+reduc inU( zero ) = true; inU( one ) = true; inU( two ) = true.
+(* T = Bit = { 0, 1 } *)
+reduc inT( zero ) = true; inT( one ) = true; inT( two ) = false.
+
+(** Commitment **)
+fun com(value, rand, ckey) : commitment.
+fun uproof(commitment, ckey, crstring) : zkproof [private].
+reduc (* verComPack *)
+  forall d:commitment, ck:ckey, crs:crstring; 
+  verComPack( d, ck, uproof(d,ck,crs), crs ) = true.
+reduc (* extractCom *)
+  forall v:value, r:rand, ck:ckey, extd:extrdoor; 
+  extractCom( uproof(com(v,r,ck),ck,crsfor(extd)), extd ) = v.
+
+(** Encryption **)
+fun enc(tag, value, rand, ekey) : ciphertext.
+fun tproof(ciphertext, ekey, crstring) : zkproof [private].
+reduc (* dec *)
+  forall t:tag, v:value, r:rand, dk:dkey; 
+   dec( enc(t,v,r,ekfor(dk)), dk ) = v.
+reduc (* verEndPack *)
+  forall c:ciphertext, ek:ekey, crs:crstring;
+   verEncPack( c, ek, tproof(c,ek,crs), crs ) = true.
+reduc (* extractEnc *)
+  forall t:tag, v:value, r:rand, ek:ekey, extd:extrdoor;
+   extractEnc( tproof(enc(t,v,r,ek),ek,crsfor(extd)), extd ) = v.
+
+(** Evaluation **)
+fun eproof(ciphertext,ciphertext,ekey,commitment,commitment,ckey,crstring) : zkproof [private].
+reduc (* evale for sel = x0*(1-b) + x1*b *)
+  forall v:value, r:rand, ek:ekey, x0:value, x1:value, newr:rand;
+   evale( enc(tagone,zero,r,ek), x0, x1, newr ) = enc(tagzero,x0,newr,ek);	
+  forall v:value, r:rand, ek:ekey, x0:value, x1:value, newr:rand;
+   evale( enc(tagone,one,r,ek), x0, x1, newr ) = enc(tagzero,x1,newr,ek);
+  forall v:value, r:rand, ek:ekey, x0:value, x1:value, newr:rand;
+   evale( enc(tagone,two,r,ek), zero, zero, newr ) = enc(tagzero,zero,newr,ek);
+  forall v:value, r:rand, ek:ekey, x0:value, x1:value, newr:rand;
+   evale( enc(tagone,two,r,ek), zero, one, newr ) = enc(tagzero,two,newr,ek);
+  forall v:value, r:rand, ek:ekey, x0:value, x1:value, newr:rand;
+   evale( enc(tagone,two,r,ek), zero, two, newr ) = enc(tagzero,one,newr,ek);
+  forall v:value, r:rand, ek:ekey, x0:value, x1:value, newr:rand;
+   evale( enc(tagone,two,r,ek), one, zero, newr ) = enc(tagzero,two,newr,ek);
+  forall v:value, r:rand, ek:ekey, x0:value, x1:value, newr:rand;
+   evale( enc(tagone,two,r,ek), one, one, newr ) = enc(tagzero,one,newr,ek);
+  forall v:value, r:rand, ek:ekey, x0:value, x1:value, newr:rand;
+   evale( enc(tagone,two,r,ek), one, two, newr ) = enc(tagzero,zero,newr,ek);
+  forall v:value, r:rand, ek:ekey, x0:value, x1:value, newr:rand;
+   evale( enc(tagone,two,r,ek), two, zero, newr ) = enc(tagzero,two,newr,ek);
+  forall v:value, r:rand, ek:ekey, x0:value, x1:value, newr:rand;
+   evale( enc(tagone,two,r,ek), two, one, newr ) = enc(tagzero,one,newr,ek);
+  forall v:value, r:rand, ek:ekey, x0:value, x1:value, newr:rand;
+   evale( enc(tagone,two,r,ek), two, two, newr ) = enc(tagzero,zero,newr,ek) [private].
+reduc (* verEvalPack *)
+  forall c:ciphertext,c1:ciphertext,ek:ekey,d1:commitment,d2:commitment,ck:ckey,crs:crstring;
+   verEvalPack( c, c1, ek, d1, d2, ck, eproof(c, c1, ek, d1, d2, ck, crs), crs ) = true.
+reduc (* extractEval1 *)
+  forall c:ciphertext,c1:ciphertext,ek:ekey,v1:value,r1:rand,d2:commitment,ck:ckey,extd:extrdoor;
+   extractEval1( eproof(c, c1, ek, com(v1, r1, ck), d2, ck, crsfor(extd)), extd ) = v1.
+reduc (* extractEval2 *)
+  forall c:ciphertext,c1:ciphertext,ek:ekey,d1:commitment,v2:value,r2:rand,ck:ckey,extd:extrdoor;
+   extractEval2( eproof(c, c1, ek, d1, com(v2, r2, ck), ck, crsfor(extd)), extd ) = v2.
+
+(***** Adversary Oracles *****)
+
+let advcommitu(ck:ckey, crs:crstring) =
+  in(advcommituin, (v:value, r:rand));
+  if inU(v) then (
+    let d = com(v, r, ck) in
+    let p = uproof(d, ck, crs) in
+    let pack = (d, ck, p, crs) in
+    out(advcommituout, pack)
+  ).
+
+let advencryptt(ek:ekey, crs:crstring) =
+  in(advencrypttin, (v:value, r:rand));
+  if inT(v) then (
+    let c = enc(tagone, v, r, ek) in
+    let p = tproof(c, ek, crs) in
+    let pack = (c, ek, p, crs) in
+    out(advencrypttout, pack)
+  ).
+
+let advevale(ek:ekey, ck:ckey, crs:crstring) =
+  in(advevalein, (cb:ciphertext, x0:value, r0:rand, x1:value, r1:rand));
+  new newr:rand;
+  let cx = evale(cb, x0, x1, newr) in
+  let d0 = com(x0, r0, ck) in
+  let d1 = com(x1, r1, ck) in
+  let p = eproof(cx, cb, ek, d0, d1, ck, crs) in
+  let pack = (cx, cb, ek, d0, d1, ck, p, crs) in
+  out(advevaleout, pack).
+
+(***** Merged Real+Ideal Protocol *****)
+
+let mergedProtocol(ckS:ckey, ekR:ekey, crsS:crstring, crsR:crstring, dkR:dkey, extdS:extrdoor) =
+
+  in(inR, b:value);
+  if inT(b) then (
+    new rb:rand;
+    let cb = enc(tagone, choice[b,zero], rb, ekR) in
+    let pb = tproof(cb, ekR, crsR) in
+    let cbpack = (cb, ekR, pb, crsR) in
+    out(leakRS, cbpack);
+
+    in(inflSR, (cv:ciphertext,cbmark:ciphertext,ek:ekey,d0:commitment,d1:commitment,ck:ckey,pv:zkproof,crs:crstring));
+    if verEvalPack(cv, cbmark, ekR, d0, d1, ckS, pv, crsS) && cbmark = cb then (
+      let v0:value = choice[zero, extractEval1(pv,extdS)] in
+      let v1:value = choice[zero, extractEval2(pv,extdS)] in
+      if b = zero then (
+        out(outR, choice[dec(cv,dkR), v0])
+      ) else (
+        out(outR, choice[dec(cv,dkR), v1])
+      )
+    )
+  ).
+
+
+process 
+(
+  new ckS:ckey;
+  new ckR:ckey;
+  new dkS:dkey;
+  new dkR:dkey;
+  let ekS = ekfor(dkS) in
+  let ekR = ekfor(dkR) in
+  new extdS:extrdoor;
+  new extdR:extrdoor;
+  let crsS = crsfor(extdS) in
+  let crsR = crsfor(extdR) in
+  out(leaksetup, (ckS, ckR, ekS, ekR, crsS, crsR, dkS));
+  (
+    ( ! advcommitu(ckS, crsS) ) |
+    ( ! advencryptt(ekR, crsR) ) |
+    ( ! advevale(ekR, ckS, crsS) ) |
+    mergedProtocol(ckS, ekR, crsS, crsR, dkR, extdS)
+  )
+)
