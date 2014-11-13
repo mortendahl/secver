@@ -1,0 +1,7 @@
+new opennet;
+new safenet;
+(
+    (new m; out opennet m)
+    | (!in opennet y; ( begin confirmed(y) | out safenet (y, ok) ))
+    | (!in safenet z; ex snd z; end confirmed(fst z))
+)

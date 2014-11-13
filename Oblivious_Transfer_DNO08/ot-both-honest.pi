@@ -61,10 +61,10 @@ fun com(value, rand, ckey) : commitment.
 fun uproof(commitment, ckey, crstring) : zkproof [private].
 reduc (* verComPack *)
   forall d:commitment, ck:ckey, crs:crstring; 
-  verComPack( d, ck, uproof(d,ck,crs), crs ) = true.
+   verComPack( d, ck, uproof(d,ck,crs), crs ) = true.
 reduc (* extractCom *)
   forall v:value, r:rand, ck:ckey, extd:extrdoor; 
-  extractCom( uproof(com(v,r,ck),ck,crsfor(extd)), extd ) = v.
+   extractCom( uproof(com(v,r,ck),ck,crsfor(extd)), extd ) = v.
 
 (** Encryption **)
 fun enc(tag, value, rand, ekey) : ciphertext.
@@ -80,7 +80,7 @@ reduc (* extractEnc *)
    extractEnc( tproof(enc(t,v,r,ek),ek,crsfor(extd)), extd ) = v.
 
 (** Evaluation **)
-fun eproof(ciphertext,ciphertext,ekey,commitment,commitment,ckey,crstring) : zkproof [private].
+fun eproof(ciphertext, ciphertext, ekey, commitment, commitment, ckey, crstring) : zkproof [private].
 reduc (* evale for sel = x0*(1-b) + x1*b *)
   forall v:value, r:rand, ek:ekey, x0:value, x1:value, newr:rand;
    evale( enc(tagone,zero,r,ek), x0, x1, newr ) = enc(tagzero,x0,newr,ek);	
@@ -179,6 +179,7 @@ let mergedProtocol(ckS:ckey, ekR:ekey, crsS:crstring, crsR:crstring, dkR:dkey) =
       )
     )
   ).
+
 
 process 
 (
